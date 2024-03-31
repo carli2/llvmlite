@@ -29,11 +29,14 @@ llvm_ir = """
    }
    """
 
-lljit = llvm.create_lljit_compiler()
-rt = llvm.JITLibraryBuilder().add_ir(llvm_ir).export_symbol('fpadd')\
-    .link(lljit, 'fpadd')
+mod = llvm.parse_assembly(llvm_ir)
+target = llvm.Target.from_default_triple()
+tm = target.create_target_machine()
+ee = llvm.create_mcjit_compiler(mod, tm)
 
-cfunc = CFUNCTYPE(c_double, c_double, c_double, POINTER(c_double))(rt['fpadd'])
+cfunc = ee.get_function_address("fpadd")
+
+cfunc = CFUNCTYPE(c_double, c_double, c_double, POINTER(c_double))(cfunc)
 
 # Create some floating point data and get a pointer to it that we can pass in
 # to the jitted function
